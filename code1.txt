@@ -1,0 +1,272 @@
+**********PERCEPTRON***********
+
+
+
+
+import numpy as np
+from sklearn.datasets import load_iris
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn import datasets
+
+class Perceptron:
+    def __init__(self, learning_rate=0.01, iterations=1000):
+        self.lr = learning_rate
+        self.iterations = iterations
+        self.activation_func = self.unitStepFunction
+        self.w = None
+        self.b = None
+
+    def fit(self, X, y):
+        samples, features = X.shape
+        self.w = np.zeros(features)
+        self.b = 0
+
+        y_ = np.array([1 if i > 0 else 0 for i in y])
+
+        for _ in range(self.iterations):
+            for ii, x_i in enumerate(X):
+                y_value = np.dot(x_i, self.w) + self.b
+                y_pred = self.activation_func(y_value)
+                updateVal = self.lr * (y_[ii] - y_pred)
+                self.w += updateVal * x_i
+                self.b += updateVal
+
+    def predict(self, X):
+        y_value = np.dot(X, self.w) + self.b
+        y_pred = self.activation_func(y_value)
+        return y_pred
+
+    def unitStepFunction(self, x):
+        return np.where(x >= 0, 1, 0)
+        
+
+
+if __name__ == "__main__":
+    
+
+    def accuracy(y_true, y_pred):
+        accuracy = np.sum(y_true == y_pred) / len(y_true)
+        return accuracy
+    iris = load_iris()
+    X, y = iris.data, iris.target
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=123)
+
+    p = Perceptron(learning_rate=0.01, iterations=1000)
+    p.fit(X_train, y_train)
+    predictions = p.predict(X_test)
+
+    print("Perceptron classification accuracy :", accuracy(y_test, predictions))
+
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    plt.scatter(X_train[:, 0], X_train[:, 1], marker="o", c=y_train)
+
+    x0_1 = np.amin(X_train[:, 0])
+    x0_2 = np.amax(X_train[:, 0])
+
+    x1_1 = (-p.w[0] * x0_1 - p.b) / p.w[1]
+    x1_2 = (-p.w[0] * x0_2 - p.b) / p.w[1]
+
+    ax.plot([x0_1, x0_2], [x1_1, x1_2], "k")
+
+    ymin = np.amin(X_train[:, 1])
+    ymax = np.amax(X_train[:, 1])
+    ax.set_ylim([ymin - 3, ymax + 3])
+
+    plt.show()
+
+
+
+
+
+*********KNN***********
+
+
+
+
+
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+
+iris = pd.read_csv('Iris.csv')
+# iris = datasets.load_iris()
+cols=iris.columns.tolist()
+X = iris[cols[:-1]]
+Y = iris[cols[-1]].to_numpy()
+
+l=LabelEncoder()
+Y=l.fit_transform(Y)
+
+X = (X-X.mean())/X.std()
+X = X.to_numpy()
+X_train, X_test, y_train, y_test = train_test_split(X,Y,test_size=0.2)
+
+def distance (x,y):
+    dist=0
+    for i in range(len(x)):
+        dist+=np.square(x[i]-y[i])
+    return np.sqrt(dist)
+
+def knn(X,Y,x,y,k):
+    dist=[]
+    for j in range(len(X)):
+        dist.append((distance(X[j],x),Y[j]))
+    dist.sort()
+    k_dist = dist[:k]
+    count=[0]*3
+    for n in k_dist:
+        count[n[1]]+=1
+    return count.index(max(count))
+   
+y_pred=[]
+k=int(np.sqrt(len(y_train)))
+for i in range(len(X_test)):
+    y_pred.append(knn(X_train,y_train,X_test[i],y_test[i],k))
+
+print(y_pred)
+print(list(y_test))
+ct = pd.crosstab(y_test, y_pred)
+print(ct)
+
+
+
+
+
+
+************PCA************
+
+
+
+
+
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import plotly.express as px
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+
+data = np.array([[1000 ,500],[2000, 800],[3000 ,1100],[4000 ,1500],[5000 ,1800],[8000,1900]])
+df = pd.DataFrame(data,columns = ['Salary','Expense'])
+
+fig = px.scatter(df, x="Salary", y="Expense", trendline="ols")
+fig.show()
+
+scaler = StandardScaler()
+scaled = scaler.fit_transform(data)
+
+cov_mat = np.cov(scaled[:,0], scaled[:,1])
+
+fig = px.imshow(cov_mat, text_auto=True)
+fig.show()
+
+
+eig_vals, eig_vecs = np.linalg.eig(cov_mat)
+
+
+print(f'Eigen Values: \n{eig_vals}')
+print(f'\nEigen Vectors: \n{eig_vecs}')
+
+
+# Make a list of (eigenvalue, eigenvector) tuples
+eig_pairs = [(np.abs(eig_vals[i]), eig_vecs[:,i]) for i in range(len(eig_vals))]
+
+# Sort the (eigenvalue, eigenvector) tuples from high to low
+eig_pairs.sort(key=lambda x: x[0], reverse=True)
+
+
+tot = sum(eig_vals)
+var_exp = [(i / tot)*100 for i in sorted(eig_vals, reverse=True)]
+
+len(var_exp)
+
+plt.style.use("dark_background")
+plt.figure(figsize=(4,6))
+sns.barplot(x=[1,2],y=var_exp)
+
+
+matrix_w = np.hstack((eig_pairs[0][1].reshape(2,1)))
+print('Matrix W:\n', matrix_w)
+
+#eig_vecs[0].T
+
+final_data = np.dot(scaled, np.array(matrix_w))
+print(final_data)
+
+pca = PCA(n_components=1)
+pca.fit(scaled)
+print("Varaince explained by principal component is \n", pca.explained_variance_ratio_)
+print("Final output after PCA \n",pca.transform(scaled)[:,0])
+
+
+
+
+
+
+**********K MEANS**********
+
+
+
+
+
+
+from sklearn import datasets
+import random
+import numpy as np
+
+def dist(x, y):
+    n = len(x)
+    dist=0
+    for i in range(n):
+        dist += np.square(x[i]-y[i])
+    return np.sqrt(dist)
+
+    
+def KMeans(data, n_clusters=3):
+    
+    n = len(data[0])
+    
+    cluster_centres_old = [data[random.randint(0, len(data)-1)] for i in range(n_clusters)]
+    
+    cluster_centres_new = list(cluster_centres_old)
+    
+    while True: 
+        labels =[]
+        count = np.zeros(n_clusters)
+        
+        for i in range(len(data)):
+            distances = []
+            for j in range(len(cluster_centres_old)):
+                distances.append(dist(data[i], cluster_centres_old[j]))
+            label = distances.index(min(distances))
+            labels.append(label)
+            count[label]+=1
+            
+        
+        for i in range(n_clusters):
+            cluster_centres_new[i]  = np.zeros(n)
+        
+        for i in range(len(data)):
+            cluster_centres_new[labels[i]] += data[i]/count[labels[i]]
+        
+        if np.array_equal(cluster_centres_old, cluster_centres_new):
+            break
+        else:
+            cluster_centres_old  = list(cluster_centres_new)
+            
+    return { "labels": labels, "cluster_centres" : cluster_centres_old }
+
+    
+
+
+iris = datasets.load_iris()
+data = iris.data
+actual_labels = iris.target
+
+print(KMeans(data, 3))
